@@ -23,5 +23,7 @@ jobs:
         working-directory: frontend
       - run: npm test
         working-directory: frontend
+      - run: node --test tests/engine.node.test.mjs
+        working-directory: frontend
       - run: npm run build
         working-directory: frontend
