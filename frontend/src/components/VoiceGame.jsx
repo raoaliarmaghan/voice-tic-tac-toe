@@ -6,7 +6,8 @@ import {useGameController} from '../hooks/useGameController';
 import {parsePosition,snapshot} from '../game/engine';
 
 async function tokenProvider(){
-  const response=await fetch('/api/voice-token',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({participant_name:'Tic Tac Toe Player'})});
+  // BASE_URL is "/" locally and "/tic-tac-toe/" in the portfolio build.
+  const response=await fetch(`${import.meta.env.BASE_URL}api/voice-token`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({participant_name:'Tic Tac Toe Player'})});
   if(!response.ok){const data=await response.json().catch(()=>({}));throw new Error(data.detail||'Unable to connect to token server.');}
   return response.json();
 }

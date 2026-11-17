@@ -81,6 +81,7 @@ export function GameView({controller,connected=false,busy=false,onMic,room=null,
         <div className="brand-mark"><span>×</span><span>○</span></div>
         <div><div className="brand-title">VOCAL<span>GRID</span></div><div className="brand-sub">ARMAGHAN LABS</div></div>
       </div>
+      {import.meta.env.BASE_URL!=='/'&&<a className="back-link" href="/">← Back to portfolio</a>}
     </header>
 
     <main>

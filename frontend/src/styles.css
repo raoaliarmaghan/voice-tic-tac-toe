@@ -17,6 +17,8 @@ main{flex:1}
 /* Header */
 .topbar{height:76px;display:flex;align-items:center;border-bottom:1px solid #273148}
 .brand{display:flex;align-items:center;gap:12px}
+.back-link{margin-left:auto;color:#a2aec7;font-size:13px;font-weight:700;text-decoration:none;border:1px solid #2d3a55;border-radius:8px;padding:8px 12px;transition:color .2s,border-color .2s}
+.back-link:hover{color:#eef2ff;border-color:#786bea}
 .brand-mark{background:#8b74f9;border-radius:12px;width:43px;height:43px;display:grid;grid-template-columns:1fr 1fr;align-items:center;text-align:center;font-size:20px;font-weight:800;color:white}
 .brand-title{font-family:'Space Grotesk';font-size:19px;font-weight:700;letter-spacing:1.5px}
 .brand-title span{color:#a496ff}
