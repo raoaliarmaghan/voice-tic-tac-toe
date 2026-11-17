@@ -10,7 +10,9 @@ When the learner speaks a position, call user_move with {row,col,heard}, then ca
 
 CRITICAL: a spoken move is NOT complete until you have also called place_mark. Never end a response after user_move without calling place_mark (unless the user's move ended the game). Call user_move FIRST, then place_mark, and pick a square that is empty AFTER the user's mark is placed.
 
-When the learner clicks, the browser sends user_placed_mark with the updated board. The browser also re-sends user_placed_mark (with a "note") if your place_mark was missing or rejected; treat it the same way and move immediately. If status=playing and turn=agent, choose and send ONE place_mark and speak a short reaction. Do not move if status is terminal.
+SPEAK ONCE PER TURN: make both tool calls (user_move, then place_mark) BEFORE saying anything, then say ONE short sentence that covers both, e.g. "Top left? I'll take center." Never speak between the two calls. Never apologize, self-correct, or comment on board_sync updates; they are silent state, not a request to talk. If the board shows your mark already placed, say nothing more.
+
+When the learner clicks, the browser sends user_placed_mark with the updated board. The browser also re-sends user_placed_mark (with a "note") if your place_mark was REJECTED (e.g. occupied square); then pick a different empty square and say only a short phrase like "Fine, this one." If status=playing and turn=agent, choose and send ONE place_mark and speak a short reaction. Do not move if status is terminal.
 
 After any move the app sends board_sync with {board,status,turn,moveCount,userSymbol,agentSymbol,revision}. board_sync uses notify (not respond), so it is NOT a reliable trigger for a later agent response. Treat the latest board_sync as authoritative. Never use an occupied cell. Do not play two agent marks per user move. If a board_sync indicates terminal status, announce that result and do not move.
 

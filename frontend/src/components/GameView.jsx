@@ -1,24 +1,136 @@
-import {useState} from 'react';
-import {Mic,MousePointer2,RotateCcw,ArrowUpRight,Wifi,WifiOff,Activity,Code2,CheckCircle2,Info} from 'lucide-react';
+import {useEffect,useRef,useState} from 'react';
+import {Mic,MicOff,Loader2,RotateCcw} from 'lucide-react';
 import {winnerOf,POSITIONS} from '../game/engine';
-export function GameView({mode,controller,transcript=[],connection='offline',voiceError='',children}){
- const {game,history,start,click,clear,agentAuto}=controller;
- const [showGuide,setShowGuide]=useState(false);
- const {line}=winnerOf(game.board);
- const statusText=game.status==='idle'?'Ready when you are':game.status==='user_wins'?'You win!':game.status==='agent_wins'?'Agent wins!':game.status==='draw'?"It's a draw!":game.turn==='user'?'Your move':'Agent is thinking';
- return <div className="shell">
- <header className="topbar"><div className="brand"><div className="brand-mark"><span>×</span><span>○</span></div><div><div className="brand-title">VOCAL<span>GRID</span></div><div className="brand-sub">TIC-TAC-TOE · VOICE LAB</div></div></div><div className="header-links"><span className="header-tag">REACT + VOCAL BRIDGE</span><a href="https://github.com/new" target="_blank" rel="noreferrer">Publish to GitHub <ArrowUpRight size={14}/></a></div></header>
- <div className="hero"><div className="eyebrow"><span className="eyebrow-dot"/> INTERACTIVE VOICE EXPERIENCE <span className="vline"/> VERSION 1.0</div><h1>Make your <em>move.</em><br/>Just say the word.</h1><p>Play Tic-Tac-Toe with an AI voice opponent. Speak a move, tap a square, and watch the two stay perfectly in sync.</p><div className="hero-chips"><span><Mic size={14}/> VOICE COMMANDS</span><span><MousePointer2 size={14}/> CLICK TO PLAY</span><span><Activity size={14}/> LIVE STATE SYNC</span></div></div>
- <main className="main-grid"><section className="game-panel"><div className="panel-header"><div><span className="section-kicker">01 / PLAYGROUND</span><h2>The board</h2></div><div className={`pill ${mode==='voice'&&String(connection).toLowerCase().includes('connected')?'pill-live':''}`}><span className="status-dot"/>{mode==='demo'?'DEMO MODE':String(connection).replace(/([a-z])([A-Z])/g,'$1 $2').toUpperCase()}</div></div>
- <div className="players"><div className={`player ${game.turn==='user'?'player-current':''}`}><span className="symbol x">{game.userSymbol}</span><div><strong>YOU</strong><small>Human player</small></div>{game.turn==='user'&&<span className="turn-badge">TURN</span>}</div><div className="versus">VS</div><div className={`player ${game.turn==='agent'?'player-current':''}`}><span className="symbol o">{game.agentSymbol}</span><div><strong>{mode==='demo'?'LOCAL BOT':'VOICE AI'}</strong><small>Your opponent</small></div>{game.turn==='agent'&&<span className="turn-badge">TURN</span>}</div></div>
- <div className="board-wrap"><div className="board"><div className="board-grid">{game.board.map((cell,i)=><button key={i} aria-label={`${POSITIONS[i]}, ${cell||'empty'}`} title={POSITIONS[i]} disabled={!game.visible||Boolean(cell)||game.status!=='playing'||game.turn!=='user'} onClick={()=>click(i)} className={`square ${cell==='X'?'square-x':cell==='O'?'square-o':''} ${line.includes(i)?'square-winning':''}`}>{cell||<span className="placeholder">{i+1}</span>}</button>)}</div></div>{!game.visible&&<div className="board-overlay"><div className="overlay-icon">✦</div><strong>Game not started</strong><span>Start a new match below</span></div>}</div>
- <div className="game-status"><span className={`status-indicator ${game.status==='playing'?'pulse':''}`}/><strong>{statusText}</strong><span className="status-count">{game.board.filter(Boolean).length} / 9 MOVES</span></div>
- <div className="board-buttons"><button className="primary-btn" onClick={()=>start()}><RotateCcw size={17}/> New game</button><button className="secondary-btn" onClick={clear}>Clear board</button>{mode==='demo'&&game.visible&&game.turn==='agent'&&game.status==='playing'&&<button className="secondary-btn" onClick={agentAuto}>Bot move</button>}</div>
- <div className="footnote"><Info size={15}/> In voice mode, the agent controls O. The board always validates the moves.</div>
- </section>
- <aside className="side-stack"><section className="voice-panel"><div className="panel-header"><div><span className="section-kicker">02 / VOICE CONNECTION</span><h2>Voice controls</h2></div><span className="mic-ring"><Mic size={18}/></span></div><div className="voice-visual"><div className="wave-bars">{Array.from({length:29},(_,i)=><span key={i} style={{height:`${10+((i*17+11)%38)}px`,animationDelay:`${i*37}ms`}}/>)}</div><div className="wave-caption">{mode==='demo'?'VOICE DISCONNECTED · LOCAL DEMO': 'TWO-WAY REALTIME AUDIO'}</div></div>{children}<div className="suggestions"><span className="suggest-title">TRY SAYING</span>{["Let's play tic-tac-toe",'Put X in the center','Top left corner','Start a new game'].map(s=><div key={s} className="suggestion">“{s}”</div>)}</div>{voiceError&&<p className="error" role="alert">{voiceError}</p>}</section>
- <section className="activity-panel"><div className="panel-header"><div><span className="section-kicker">03 / OBSERVABILITY</span><h2>Activity stream</h2></div><button className="text-btn" onClick={()=>setShowGuide(!showGuide)}><Code2 size={16}/>{showGuide?'Hide':'Protocol'}</button></div>{showGuide?<div className="protocol"><strong>Agent → App</strong><p>show_tic_tac_toe · user_move · place_mark · clear_ui</p><strong>App → Agent</strong><p>user_placed_mark (respond) · board_sync (notify)</p></div>:<div className="activity-log">{history.length?history.map(item=><div className="log-item" key={item.id}><span className={`log-icon ${item.kind}`}><CheckCircle2 size={13}/></span><span>{item.message}</span><time>{item.time}</time></div>):<div className="log-empty"><Activity size={23}/><span>Events will appear here as you play.</span></div>}</div>}</section>
- <section className="transcript-panel"><div className="panel-header"><div><span className="section-kicker">04 / CONVERSATION</span><h2>Live transcript</h2></div><span className="transcript-count">{transcript.length} messages</span></div><div className="transcript-list">{transcript.length?transcript.map((t,i)=><div className="transcript-item" key={i}><span className="role-label">{t.role||'voice'}</span><p>{t.text}</p></div>):<p className="transcript-empty">{mode==='demo'?'Transcripts appear when Vocal Bridge is connected.':'Start a voice session to see the conversation.'}</p>}</div></section></aside></main>
- <footer><span>VOCALGRID · LEARNING PROJECT</span><span>Built with React, FastAPI & Vocal Bridge</span></footer>
- </div>
+import {VoiceBars} from './VoiceBars';
+
+const ENDED=['user_wins','agent_wins','draw'];
+const CENTER=[50,150,250]; // cell centres in a 300×300 viewBox
+
+function WinLine({line,status}){
+  if(line.length!==3)return null;
+  const [a,,c]=line;
+  const x1=CENTER[a%3],y1=CENTER[Math.floor(a/3)],x2=CENTER[c%3],y2=CENTER[Math.floor(c/3)];
+  const dx=Math.sign(x2-x1)*30,dy=Math.sign(y2-y1)*30; // run slightly past the end cells
+  return <svg className={`win-line ${status==='user_wins'?'win-x':'win-o'}`} viewBox="0 0 300 300" aria-hidden="true">
+    <line x1={x1-dx} y1={y1-dy} x2={x2+dx} y2={y2+dy} pathLength="1"/>
+  </svg>;
+}
+
+function statusText(game,connected){
+  if(game.status==='user_wins')return 'You win!';
+  if(game.status==='agent_wins')return 'Bot wins this one.';
+  if(game.status==='draw')return "It's a draw.";
+  if(game.status!=='playing')return 'Press New game to start.';
+  if(game.turn==='user')return connected?"Your turn — say 'center' or click a square.":'Your turn — click a square or press 1–9.';
+  return 'Bot is thinking…';
+}
+
+const SUGGESTIONS=["Let's play tic-tac-toe",'Put X in the center','Top left corner','Start a new game'];
+
+function VoicePanel({transcript,connected}){
+  const listRef=useRef(null);
+  useEffect(()=>{const el=listRef.current;if(el)el.scrollTop=el.scrollHeight;},[transcript.length]);
+  return <aside className="voice-panel" aria-label="Voice help and transcript">
+    <h2 className="panel-title">Try saying</h2>
+    <ul className="suggestions">{SUGGESTIONS.map(s=><li key={s}>“{s}”</li>)}</ul>
+
+    <h2 className="panel-title">Live transcript {connected&&<span className="live-dot" aria-label="live"/>}</h2>
+    <div className="transcript" ref={listRef} aria-live="polite">
+      {transcript.length
+        ?transcript.map((t,i)=><div key={`${t.timestamp??i}-${i}`} className={`line line-${t.role==='user'?'user':'agent'}`}>
+            <span className="who">{t.role==='user'?'You':'Bot'}</span><p>{t.text}</p>
+          </div>)
+        :<p className="transcript-empty">{connected?'Listening — start talking.':'Press Connect Voice to start talking. The conversation will appear here.'}</p>}
+    </div>
+  </aside>;
+}
+
+export function GameView({controller,connected=false,busy=false,onMic,room=null,heard='',picked=null,voiceError='',transcript=[]}){
+  const {game,start,click}=controller;
+  const {line}=winnerOf(game.board);
+  const ended=ENDED.includes(game.status);
+  const canPlay=game.visible&&game.status==='playing'&&game.turn==='user';
+
+  // Running score for this page visit; each finished game is counted once.
+  const [score,setScore]=useState({user:0,agent:0,draw:0});
+  const counted=useRef(null);
+  useEffect(()=>{
+    if(!ended||counted.current===game.revision)return;
+    counted.current=game.revision;
+    const key=game.status==='user_wins'?'user':game.status==='agent_wins'?'agent':'draw';
+    setScore(s=>({...s,[key]:s[key]+1}));
+  },[ended,game.status,game.revision]);
+
+  // Keys 1–9 play the matching square.
+  useEffect(()=>{
+    const onKey=e=>{
+      if(e.metaKey||e.ctrlKey||e.altKey||e.repeat)return;
+      if(/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName))return;
+      const n=Number(e.key);
+      if(!Number.isInteger(n)||n<1||n>9)return;
+      if(canPlay&&!game.board[n-1]){e.preventDefault();click(n-1);}
+    };
+    window.addEventListener('keydown',onKey);
+    return ()=>window.removeEventListener('keydown',onKey);
+  },[canPlay,game.board,click]);
+
+  const turn=game.status==='playing'?game.turn:null;
+  return <div className="shell">
+    <header className="topbar">
+      <div className="brand">
+        <div className="brand-mark"><span>×</span><span>○</span></div>
+        <div><div className="brand-title">VOCAL<span>GRID</span></div><div className="brand-sub">ARMAGHAN LABS</div></div>
+      </div>
+    </header>
+
+    <main>
+      <div className="hero">
+        <h1>Make your <em>move.</em><br/>Just say the word.</h1>
+        <p>Connect voice and call a square, or just click one.</p>
+      </div>
+
+      <div className="play-area">
+      <section className="game" aria-label="Tic-tac-toe">
+        <div className="voice">
+          <VoiceBars room={room} connected={connected}/>
+          <button className={`connect ${connected?'connect-live':''}`} onClick={onMic} disabled={busy} aria-pressed={connected}>
+            {busy?<Loader2 className="spin" size={18}/>:connected?<MicOff size={18}/>:<Mic size={18}/>}
+            {busy?'Connecting…':connected?'Disconnect Voice':'Connect Voice'}
+          </button>
+          <div className="heard" aria-live="polite">{heard?<span key={heard}>Heard: “{heard}”</span>:connected?<em>Listening — call a square.</em>:null}</div>
+          {voiceError&&<p className="error" role="alert">{voiceError}</p>}
+        </div>
+
+        <div className="scores">
+          <div className={`score ${turn==='user'?'current':''}`}>
+            <span className="symbol x">{game.userSymbol}</span><span className="name">YOU</span><strong className="points">{score.user}</strong>
+          </div>
+          <div className="draws"><strong>{score.draw}</strong>DRAWS</div>
+          <div className={`score ${turn==='agent'?'current':''}`}>
+            <span className="symbol o">{game.agentSymbol}</span><span className="name">BOT</span><strong className="points">{score.agent}</strong>
+          </div>
+        </div>
+
+        <div className="board">
+          <div className="board-grid">
+            {game.board.map((cell,i)=><button key={i}
+              aria-label={`${i+1}, ${POSITIONS[i]}, ${cell||'empty'}`} title={POSITIONS[i]}
+              disabled={!canPlay||Boolean(cell)} onClick={()=>click(i)}
+              className={`square ${cell===game.agentSymbol?'square-o':''} ${line.includes(i)?'square-winning':''} ${picked===i?'square-picked':''}`}>
+              {cell?<span className="mark">{cell}</span>:<span className="num">{i+1}</span>}
+            </button>)}
+          </div>
+          <WinLine line={line} status={game.status}/>
+        </div>
+
+        <p className={`status ${ended?'ended':''} ${game.status==='user_wins'?'win':game.status==='agent_wins'?'loss':''}`} aria-live="polite">{statusText(game,connected)}</p>
+
+        <button className={`new-game ${ended?'emphasis':''}`} onClick={()=>start()}><RotateCcw size={16}/> New game</button>
+      </section>
+      <VoicePanel transcript={transcript} connected={connected}/>
+      </div>
+    </main>
+
+    <footer>© Armaghan Labs</footer>
+  </div>;
 }

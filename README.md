@@ -29,8 +29,8 @@ A standalone, GitHub-ready teaching project that combines a **React/Vite Tic-Tac
 - Agent-to-app actions for opening the board, playing a move, or clearing the interface.
 - A complete authoritative board state sent back to the agent as `board_sync` on successful moves and new matches.
 - Hard validation for invalid squares, occupied squares, wrong turn, and attempts to move after a win/draw.
-- Separate local demo mode: play against a deterministic local bot with **no account, API key, microphone, Python server, or external service**.
-- Live activity log and transcript display; responsive dark-themed layout.
+- Works without voice: until the mic is connected, a deterministic local bot plays O, with **no account, API key, microphone, Python server, or external service**.
+- Single-page, responsive dark layout: score counter, keys 1–9 to play, a brief highlight of the square voice picked, a fading “Heard: …” caption, “Try saying” hints, a live transcript of both sides of the conversation, and an animated winning line.
 - FastAPI endpoint for short-lived session tokens, with credentials kept in the backend.
 - Unit tests for the game engine and backend API, plus CI workflow.
 
@@ -87,10 +87,10 @@ voice-tic-tac-toe/
     ├── index.html
     └── src/
         ├── main.jsx
-        ├── App.jsx                # Demo and Live Voice modes
+        ├── App.jsx                # Mounts the single-page game
         ├── styles.css
         ├── components/
-        │   ├── GameView.jsx       # Board, controls, transcript, activity log
+        │   ├── GameView.jsx       # Board, score, mic, voice hints, live transcript
         │   └── VoiceGame.jsx      # Vocal Bridge provider/action subscriptions
         ├── hooks/
         │   └── useGameController.js  # State & events for click or voice
@@ -119,9 +119,9 @@ npm install
 npm run dev
 ```
 
-Open **http://127.0.0.1:5173** in your browser. Keep **Local Demo** selected. Click **New game**, then select a square. The local bot plays O. Play again, clear the board, or browse the activity log. No backend configuration is needed.
+Open **http://127.0.0.1:5173** in your browser. A game is ready immediately: click a square (or press 1–9) and the local bot plays O. Press **New game** to play again; the score is kept for the visit. No backend configuration is needed.
 
-The **Live Voice** tab requires the following extra setup.
+The **Connect Voice** button requires the following extra setup.
 
 ## Full setup: voice mode
 
@@ -229,7 +229,7 @@ npm install
 npm run dev
 ```
 
-Open **http://127.0.0.1:5173**. Choose **Live Voice**, press **Connect voice**, and accept the microphone permission request. Try "Let's play tic-tac-toe", "center", "top left", and "clear". The app displays action events as well as the live transcript when provided by the SDK.
+Open **http://127.0.0.1:5173**. Press **Connect Voice** (above the board) and accept the microphone permission request; the button turns red and reads **Disconnect Voice**, and the voice bars move as you and the agent talk (purple for you, teal for the agent). Try "Let's play tic-tac-toe", "center", "top left", and "clear". The square the agent understood glows briefly before the mark lands, and a "Heard: …" caption shows your last utterance when the SDK supplies a transcript.
 
 ### 6. Confirm the end-to-end flow
 
@@ -243,16 +243,16 @@ Open **http://127.0.0.1:5173**. Choose **Live Voice**, press **Connect voice**, 
 
 ## Use the app
 
-| Control | Local demo | Live voice |
+| Control | Mic off (local bot) | Mic on (voice agent) |
 | --- | --- | --- |
-| New game | Resets the board | Resets locally and sends `board_sync` when connected |
-| Click empty square | Plays X; local bot counters | Plays X; broadcasts `user_placed_mark` + `board_sync` |
-| Connect voice | Unavailable | Connects to your configured Vocal Bridge agent |
-| Say “let's play” | Unavailable | Agent sends `show_tic_tac_toe` |
-| Say “center” | Unavailable | Agent sends `user_move` with `{row:1,col:1}` |
-| Clear board | Resets locally | Resets locally and sends idle `board_sync` (agent's `clear_ui` does the same) |
-| Activity stream | Shows board events | Shows board and incoming agent actions |
-| Live transcript | No transcript | Shows transcript when SDK supplies it |
+| New game | Resets the board | Resets locally and sends `board_sync` |
+| Click empty square / keys 1–9 | Plays X; local bot counters | Plays X; broadcasts `user_placed_mark` + `board_sync` |
+| Mic button | Connects to your configured Vocal Bridge agent | Disconnects; the local bot takes over |
+| Say “let's play” | — | Agent sends `show_tic_tac_toe` |
+| Say “center” | — | Agent sends `user_move` with `{row:1,col:1}`; the square glows, then X lands |
+| Say “clear” | — | Agent sends `clear_ui`; board resets and idle `board_sync` is sent |
+| “Heard: …” caption | — | Shows your last utterance when the SDK supplies a transcript |
+| Live transcript panel | Empty, with a hint to press Connect Voice | Shows what you and the agent say, newest at the bottom |
 
 A voice agent may not know about clicking **New game** unless it receives the resulting `board_sync`. Thus the local board is always authoritative, and the voice agent is expected to follow its latest snapshot.
 
@@ -269,7 +269,7 @@ The six action names and directions are preserved from the supplied course. The 
 | `user_placed_mark` | app → agent, `respond` | `{board,status,turn,moveCount,userSymbol,agentSymbol,revision,position,row,col,mark}` | User mouse click |
 | `board_sync` | app → agent, `notify` | `{board,status,turn,moveCount,userSymbol,agentSymbol,revision}` | New match, accepted move, or clear |
 
-Coordinates in actions are **zero-based**. Board array is row-major and holds 9 elements (`"X"`, `"O"`, or `null`). A failed move does not change the board or advance the turn; it is recorded in the activity panel.
+Coordinates in actions are **zero-based**. Board array is row-major and holds 9 elements (`"X"`, `"O"`, or `null`). A failed move does not change the board or advance the turn; it is recorded in the controller's internal event log.
 
 ```text
 Indexes:          Example board:
@@ -292,7 +292,7 @@ Every accepted move increments the revision. This helps developers identify stal
 
 **`frontend/src/components/VoiceGame.jsx`**: Vocal Bridge provider with custom `tokenProvider`. It subscribes to the four agent-to-app events via `onAction()`, and publishes app-to-agent events through `sendAction()`.
 
-**`frontend/src/components/GameView.jsx`**: UI only: accessible click targets, active player, banner, activity log, transcript, buttons.
+**`frontend/src/components/GameView.jsx`**: UI only: accessible click targets, score and active player, status line, mic button, “Try saying” hints, live transcript, keyboard 1–9, winning-line animation.
 
 **`backend/app/main.py`**: token minting. Reads API credentials server-side, calls the upstream token API, maps upstream `livekit_url` or `connection_url` to `url`, and returns SDK-compatible response. Error messages intentionally omit upstream response bodies.
 
@@ -321,7 +321,7 @@ On Windows PowerShell, `cd backend; python -m pytest tests -q` works because the
 
 ### Manual end-to-end checklist
 
-- [ ] Local demo starts a match and bot responds.
+- [ ] Page loads with a game ready and the bot responds.
 - [ ] Invalid and occupied moves are rejected.
 - [ ] Win/draw is detected and further moves are blocked.
 - [ ] FastAPI health reports configuration state.
@@ -330,7 +330,7 @@ On Windows PowerShell, `cd backend; python -m pytest tests -q` works because the
 - [ ] Speaking "center" places X, syncs board, and agent counters with O.
 - [ ] Clicking an empty square sends `user_placed_mark`; agent responds.
 - [ ] Calling clear resets/hides the board.
-- [ ] Transcript and activity stream update.
+- [ ] Spoken squares glow before the mark lands; the “Heard: …” caption and live transcript update.
 - [ ] API key never appears in frontend source, network token response, or git commits.
 
 ## Troubleshooting
@@ -343,11 +343,11 @@ On Windows PowerShell, `cd backend; python -m pytest tests -q` works because the
 | Token endpoint returns `502` | Upstream token API error, invalid credentials, timeout | Recheck the key/agent ID, agent deployment and service status; the API hides sensitive upstream details. |
 | `404` on `/api/voice-token` | FastAPI not running or wrong Vite proxy | Start backend at `127.0.0.1:8000` and frontend at `127.0.0.1:5173`. |
 | Browser won't use microphone | Permission denied or insecure origin | Allow mic in browser; use localhost or HTTPS. |
-| Voice connects but board doesn't move | Missing action configuration, name mismatch, agent did not call tools | Verify all six actions in Vocal Bridge; compare dashboard logs with local Activity stream. |
+| Voice connects but board doesn't move | Missing action configuration, name mismatch, agent did not call tools | Verify all six actions in Vocal Bridge; compare dashboard logs with the browser console / network tab. |
 | Voice move is rejected | Occupied cell, wrong turn, invalid coordinates, game already over | Check event log; speak an available cell during your turn. |
 | Voice says move but no UI change | Voice response emitted without corresponding `user_move` / `place_mark` action | Make sure `agent/prompt.md` is deployed and actions configured; the UI will not simulate a move based on transcript text. |
 | SDK hook differs | Platform SDK version changed | Use the pinned course SDK or update provider/action hooks together according to the version's docs. |
-| Transcript is blank | Not connected or service didn't emit transcript events | Confirm connected state, speech and agent settings. |
+| Transcript is blank / no “Heard: …” caption | Not connected or service didn't emit transcript events | Confirm connected state, speech and agent settings. |
 
 ## Security and production notes
 
